@@ -1,21 +1,24 @@
 /*
-	Butly API ( Version 1.0 )
-	CP, LR -> MySQL
-	shortlink = insert Id
+	Butly API ( Version 2.0 )
+	CP -> create_queue
+	CP -> CP:MySQL
+	LR -> MongoDB
+	QW <- create_queue
+	QW -> Main:MySQL
+	QW -> MongoDB
 */
 
 package main
 
 import (
-	"strconv"
 	"fmt"
 	"log"
 	"net/http"
 	"encoding/json"
 	"github.com/codegangsta/negroni"
+	"github.com/streadway/amqp"
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
-	"github.com/satori/go.uuid"
     "database/sql"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -26,13 +29,13 @@ import (
 		Reference: https://golang.org/pkg/database/sql/
 */
 
-var mysql_connect = "root:cmpe281@tcp(localhost:3306)/cmpe281"
-//var mysql_connect = "root:cmpe281@tcp(mysql:3306)/cmpe281"
+//var mysql_connect = "root:cmpe281@tcp(localhost:3306)/cmpe281"
+var mysql_connect = "root:cmpe281@tcp(mysql:3307)/cmpe281"
 
 // RabbitMQ Config
-var rabbitmq_server = "rabbit"
+var rabbitmq_server = "rabbitmq"
 var rabbitmq_port = "5672"
-var rabbitmq_queue = "gumball"
+var create_queue = "create_queue"
 var rabbitmq_user = "user"
 var rabbitmq_pass = "password"
 
@@ -51,41 +54,40 @@ func NewServer() *negroni.Negroni {
 // Init MySQL DB Connection
 func init() {
 
-	db, err := sql.Open("mysql", mysql_connect)
-	if err != nil {
-		log.Fatal(err)
-	} else {
-		var (
-			id int
-			count int
-			model string
-			serial string
-		)
-		rows, err := db.Query("select id, count_gumballs, model_number, serial_number from gumball where id = ?", 1)
+		db, err := sql.Open("mysql", mysql_connect)
 		if err != nil {
 			log.Fatal(err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			err := rows.Scan(&id, &count, &model, &serial)
+		} else {
+			var (
+				id int
+				short_url string
+				claimed bool
+			)
+			rows, err := db.Query("select id, short_url, claimed from short_links where ? limit 1", 1)
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Println(id, count, model, serial)
+			defer rows.Close()
+			for rows.Next() {
+				err := rows.Scan(&id, &short_url, &claimed)
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Println(id, short_url, claimed)
+			}
+			err = rows.Err()
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
-		err = rows.Err()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	defer db.Close()
+		defer db.Close()
 
 }
 
 // API Routes
 func initRoutes(mx *mux.Router, formatter *render.Render) {
 	mx.HandleFunc("/ping", pingHandler(formatter)).Methods("GET")
-	mx.HandleFunc("/urls", butlyShortenUrlHandler(formatter)).Methods("POST")
+	mx.HandleFunc("/link_save", butlyShortenUrlHandler(formatter)).Methods("POST")
 }
 
 // Helper Functions
@@ -99,19 +101,17 @@ func failOnError(err error, msg string) {
 // API Ping Handler
 func pingHandler(formatter *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		formatter.JSON(w, http.StatusOK, struct{ Test string }{"API version 1.0 alive!"})
+		formatter.JSON(w, http.StatusOK, struct{ Test string }{"CP Server - API version 2.0 alive!"})
 	}
 }
 
 // API Shorten a URL
 func butlyShortenUrlHandler(formatter *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		var reqBody shortenUrlReq
+		var reqBody shortlinkReq
 
 		err := json.NewDecoder(req.Body).Decode(&reqBody)
 		failOnError(err, "Error parsing request body")
-		// reqBody, err := ioutil.ReadAll(req.Body)
-		// failOnError(err, "Error reading request body")
 
 		fmt.Printf("Short Request: %+v \n", reqBody)
 
@@ -119,36 +119,77 @@ func butlyShortenUrlHandler(formatter *render.Render) http.HandlerFunc {
 			id int
 			orig_url string
 			short_url string
-			visits int
 		)
 
-		id = insertId + 1
 		orig_url = reqBody.OrigUrl
-		short_url = strconv.Itoa(id)
-		visits = 0
-
-		fmt.Println("Insert Values: ", id, orig_url, short_url, visits)
 
 		db, err := sql.Open("mysql", mysql_connect)
 		defer db.Close()
 		if err != nil {
 			log.Fatal(err)
 		} else {
-			result, insErr := db.Exec("insert into tiny_urls ( id, orig_url, short_url, visits ) values ( ?, ?, ?, ? ) ;", id, orig_url, short_url, visits )
-			if insErr != nil {
-				log.Fatal( insErr )
-			} else {
-				lastId, _ := result.LastInsertId()
-				insertId = int(lastId)
+			rows, err := db.Query("select id, short_url from short_links where claimed = false limit 1 ;" )
+			failOnError(err, "Error on selecting new short_link from mysql db")
+			defer rows.Close()
+			for rows.Next() {
+				err := rows.Scan(&id, &short_url)
+				failOnError(err, "Error on scanning row")
+				log.Println(id, short_url)
 			}
 		}
+		res, err := db.Exec("update short_links set claimed = true where id = ?", id)
+		failOnError( err, "Error on claiming short_url")
+		log.Println(res)
 
-		result := shortenUrlResp {
+		msg := shortlinkMsg {
+			OrigUrl: orig_url,
+			ShortUrl: short_url,
+		}
+
+		msgJson, err := json.Marshal(msg)
+		failOnError(err, "Error marshalling json from shortlink")
+		queue_send( string(msgJson) )
+
+		result := shortlinkResp {
 			ShortUrl: short_url,
 		}
 		fmt.Println("Shortened Url: ", result)
-		formatter.JSON( w, http.StatusOK, result)
+		formatter.JSON(w, http.StatusOK, result)
 	}
+}
+
+// Send Order to Queue for Processing
+func queue_send(message string) {
+	conn, err := amqp.Dial("amqp://"+rabbitmq_user+":"+rabbitmq_pass+"@"+rabbitmq_server+":"+rabbitmq_port+"/")
+	failOnError(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer ch.Close()
+
+	q, err := ch.QueueDeclare(
+		create_queue, // name
+		false,   // durable
+		false,   // delete when unused
+		false,   // exclusive
+		false,   // no-wait
+		nil,     // arguments
+	)
+	failOnError(err, "Failed to declare a queue")
+
+	body := message
+	err = ch.Publish(
+		"",     // exchange
+		q.Name, // routing key
+		false,  // mandatory
+		false,  // immediate
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        []byte(body),
+		})
+	log.Printf(" [x] Sent %s", body)
+	failOnError(err, "Failed to publish a message")
 }
 
 /*
@@ -159,17 +200,12 @@ func butlyShortenUrlHandler(formatter *render.Render) http.HandlerFunc {
 
 	-- Create Database Table
 
-		CREATE TABLE tiny_urls ( id bigint(20) NOT NULL AUTO_INCREMENT, orig_url varchar(512) NOT NULL, short_url varchar(45) NOT NULL, visits int(11) NOT NULL, created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY short_url (short_url) ) ;
+		CREATE TABLE tiny_urls (
+		id bigint(20) NOT NULL AUTO_INCREMENT, orig_url varchar(512) NOT NULL, short_url varchar(45) NOT NULL, visits int(11) NOT NULL, created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY short_url (short_url) ) ;
 
-		CREATE TABLE gumball ( id bigint(20) NOT NULL AUTO_INCREMENT, version bigint(20) NOT NULL, count_gumballs int(11) NOT NULL, model_number varchar(255) NOT NULL, serial_number varchar(255) NOT NULL, PRIMARY KEY (id), UNIQUE KEY serial_number (serial_number) ) ;
+		CREATE TABLE short_links (
+		id bigint(20) NOT NULL AUTO_INCREMENT, short_url varchar(45) BINARY NOT NULL, claimed tinyint(1) DEFAULT false, PRIMARY KEY (id), UNIQUE KEY short_url (short_url) ) ;
 
-	-- Load Data
-
-		insert into gumball ( id, version, count_gumballs, model_number, serial_number ) values ( 1, 0, 1000, 'M102988', '1234998871109' ) ;
-
-	-- Verify Data
-
-		select * from gumball ;
-
+	-- Create Procedure
 
 */

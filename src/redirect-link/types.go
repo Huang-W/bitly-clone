@@ -1,23 +1,25 @@
 /*
-	Gumball API in Go (Version 4)
-	Uses MySQL
+	Butly API ( Version 2.0 )
+	CP -> create_queue
+	CP -> CP:MySQL
+	LR -> MongoDB
+	QW <- create_queue
+	QW -> Main:MySQL
+	QW -> MongoDB
 */
 
 package main
 
-type gumballMachine struct {
-	Id             	int
-	CountGumballs   int
-	ModelNumber 	string
-	SerialNumber 	string
-}
+import (
+  "gopkg.in/mgo.v2/bson"
+)
 
-type order struct {
-	Id             	string
-	OrderStatus 	string
+type shortlinkDoc struct {
+	Id bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	OrigUrl string
+	ShortUrl string
+	Visits int
 }
-
-var orders map[string] order
 
 type redirectUrlResp struct {
 	OrigUrl string

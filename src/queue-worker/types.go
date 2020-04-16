@@ -15,10 +15,8 @@ type shortlinkMsg struct {
 	ShortUrl string
 }
 
-type shortlinkReq struct {
+type shortlinkDoc struct {
 	OrigUrl string
-}
-
-type shortlinkResp struct {
 	ShortUrl string
+	visits int
 }

@@ -4,53 +4,46 @@ import (
   "fmt"
   "time"
   "math/rand"
-  "strings"
   "log"
   "math/big"
-  "database/sql"
-_ "github.com/go-sql-driver/mysql"
+  "gopkg.in/mgo.v2"
+    "gopkg.in/mgo.v2/bson"
 )
 
-//var mysql_connect = "root:cmpe281@tcp(localhost:3307)/cmpe281"
-var mysql_connect = "root:cmpe281@tcp(mysql:3307)/cmpe281"
+// MongoDB Config
+var mongodb_server = "35.225.69.179"
+var mongodb_user = "cmpe281"
+var mongodb_password = "mymongocppassword"
+var mongodb_database = "cmpe281"
+var mongodb_collection = "shortlinks"
 
 func main() {
 
-  db, err := sql.Open("mysql", mysql_connect)
-  defer db.Close()
-
-  failOnError( err, "unable to connect to db")
-
-  sqlStr := "insert into short_links ( short_url ) values "
+  // check mongo-cp
+	session, err := mgo.Dial(mongodb_user+":"+mongodb_password+"@"+mongodb_server)
+  failOnError(err, "Error connecting to mongodb")
+	defer session.Close()
+	session.SetMode(mgo.Monotonic, true)
+	c := session.DB(mongodb_database).C(mongodb_collection)
+  b := c.Bulk()
   vals := []string{}
-
   for i := int64(62); i < 3844; i++ {
     short_url := big.NewInt(i).Text(62)
-
-    sqlStr += "( ? ),"
     vals = append( vals, short_url )
   }
 
   Shuffle( vals )
 
-  sqlVals := []interface{}{}
-
+  mgoVals := []interface{}{}
   for _, d := range vals {
-    sqlVals = append( sqlVals, d )
+    mgoVals = append( mgoVals, bson.M{ "_id": d } )
   }
 
-  // fmt.Println( sqlVals )
-
-  sqlStr = strings.TrimSuffix( sqlStr, "," )
-
-  stmt, err := db.Prepare( sqlStr )
-  failOnError( err, "Error preparing sql statement")
-
-  res, err := stmt.Exec( sqlVals... )
-  failOnError( err, "Error inserting values into db")
-
-  fmt.Println( res )
-
+  // insert into mongo
+  b.Insert(mgoVals...)
+  res, err := b.Run()
+  failOnError(err, "Failed bulk insert")
+  fmt.Println(res)
 }
 
 // Helper Functions
@@ -71,3 +64,18 @@ func Shuffle(vals []string) {
     vals = vals[:n-1]
   }
 }
+
+/*
+
+	-- Create Database Schema (DB User: root, DB Pass: cmpe281)
+
+		Database Schema: cmpe281
+
+	-- Create Database Table
+
+		CREATE TABLE short_links (
+		id bigint(20) NOT NULL AUTO_INCREMENT, short_url varchar(45) BINARY NOT NULL, claimed tinyint(1) DEFAULT false, PRIMARY KEY (id), UNIQUE KEY short_url (short_url) ) ;
+
+	-- Create Procedure
+
+*/

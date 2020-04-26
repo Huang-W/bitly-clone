@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: link-redirect
+  namespace: bitly
+  labels:
+    name: link-redirect
+spec:
+  containers:
+  - name: link-redirect
+    image: gcr.io/cmpe281-267121/link-redirect
+    env:
+    - name: NOSQL_HOST
+      value: "10.130.2.8"
+    - name: RABBITMQ_SERVER
+      value: "rabbitmq.us-central1-f.c.cmpe281-267121.internal"
+    - name: RABBITMQ_USER
+      value: "user"
+    - name: RABBITMQ_PASSWORD
+      value: "password"
+    - name: MYSQL_SERVER
+      value: "10.168.112.3"
+    - name: MYSQL_USER
+      value: "root"
+    - name: MYSQL_PASSWORD
+      value: "i2FO95C0OqHyhEb9"
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 3001
+      name: http
+      protocol: TCP

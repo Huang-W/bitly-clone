@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lr-deployment
+  namespace: bitly
+spec:
+  selector:
+    matchLabels:
+      name: link-redirect
+  replicas: 3 # tells deployment to run 2 pods matching the template
+  template: # create pods using pod definition in this template
+    metadata:
+      # unlike pod.yaml, the name is not included in the meta data as a unique name is
+      # generated from the deployment name
+      labels:
+        name: link-redirect
+    spec:
+      containers:
+      - name: link-redirect
+        image: gcr.io/cmpe281-267121/link-redirect
+        env:
+        - name: NOSQL_HOST
+          value: "10.130.2.8"
+        - name: RABBITMQ_SERVER
+          value: "rabbitmq.us-central1-f.c.cmpe281-267121.internal"
+        - name: RABBITMQ_USER
+          value: "user"
+        - name: RABBITMQ_PASSWORD
+          value: "password"
+        - name: MYSQL_SERVER
+          value: "10.168.112.3"
+        - name: MYSQL_USER
+          value: "root"
+        - name: MYSQL_PASSWORD
+          value: "i2FO95C0OqHyhEb9"
+        ports:
+        - containerPort: 3001

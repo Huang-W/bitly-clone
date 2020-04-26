@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: datastore-worker
+  namespace: bitly
+  labels:
+    name: datastore-worker
+spec:
+  containers:
+  - name: datastore-worker
+    image: localhost:32000/datastore-worker
+    imagePullPolicy: Always

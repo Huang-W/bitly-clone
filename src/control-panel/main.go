@@ -1,11 +1,5 @@
 /*
-	Butly API ( Version 2.0 )
-	CP -> create_queue
-	CP -> CP:MySQL
-	LR -> MongoDB
-	QW <- create_queue
-	QW -> Main:MySQL
-	QW -> MongoDB
+	Butly API ( Version 3.0 )
 */
 
 package main

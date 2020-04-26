@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ts-deployment
+  namespace: bitly
+spec:
+  selector:
+    matchLabels:
+      name: trend-server
+  replicas: 3 # tells deployment to run 2 pods matching the template
+  template: # create pods using pod definition in this template
+    metadata:
+      # unlike pod.yaml, the name is not included in the meta data as a unique name is
+      # generated from the deployment name
+      labels:
+        name: trend-server
+    spec:
+      containers:
+      - name: trend-server
+        image: gcr.io/cmpe281-267121/trend-server
+        env:
+        - name: RABBITMQ_SERVER
+          value: "rabbitmq.us-central1-f.c.cmpe281-267121.internal"
+        - name: RABBITMQ_USER
+          value: "user"
+        - name: RABBITMQ_PASSWORD
+          value: "password"
+        - name: MONGODB_SERVER
+          value: "mongodb-ts.us-central1-b.c.cmpe281-267121.internal"
+        - name: MONGODB_USER
+          value: "cmpe281"
+        - name: MONGODB_PASSWORD
+          value: "mymongotspassword"
+        ports:
+        - containerPort: 3002

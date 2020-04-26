@@ -1,11 +1,5 @@
 /*
-	Butly API ( Version 2.0 )
-	CP -> create_queue
-	CP -> CP:MySQL
-	LR -> MongoDB
-	QW <- create_queue
-	QW -> Main:MySQL
-	QW -> MongoDB
+	Butly API ( Version 3.0 )
 */
 
 package main
@@ -13,6 +7,14 @@ package main
 type shortlinkMsg struct {
 	OrigUrl string
 	ShortUrl string
+}
+
+type shortUrl struct {
+	ShortUrl string
+}
+
+type originalUrl struct {
+	OrigUrl string
 }
 
 type shortlinkDoc struct {

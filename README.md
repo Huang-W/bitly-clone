@@ -1,4 +1,7 @@
 # bit.ly clone
+
+## [Video Presentation](https://youtu.be/ha8RUo_m2HM)
+
 ---
 ##### Deployment Diagram
 [Bitly-Clone Deployment Diagram](design/01.bitly-diagram.png)

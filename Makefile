@@ -16,7 +16,6 @@ go-get:
 	go get -v github.com/gorilla/mux
 	go get -v github.com/unrolled/render
 	go get -v github.com/satori/go.uuid
-	go get -v github.com/gocql/gocql
 	go get -v database/sql
 	go get -v github.com/go-sql-driver/mysql
 

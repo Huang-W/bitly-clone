@@ -18,15 +18,15 @@ import (
 
 // MongoDB Config
 var mongodb_server = os.Getenv("MONGODB_SERVER")
-var mongodb_user = "cmpe281"
-var mongodb_password = "mymongoeventpassword"
+var mongodb_user = os.Getenv("MONGODB_USER")
+var mongodb_password = os.Getenv("MONGODB_PASSWORD")
 var mongodb_database = "cmpe281"
 var mongodb_collection = "eventlogs"
 
 // MySQL Config
 var mysql_server = os.Getenv("MYSQL_SERVER")
-var mysql_user = "root"
-var mysql_password = "i2FO95C0OqHyhEb9"
+var mysql_user = os.Getenv("MYSQL_USER")
+var mysql_password = os.Getenv("MYSQL_PASSWORD")
 var mysql_connect = mysql_user + ":" + mysql_password + "@tcp(" + mysql_server + ")/cmpe281"
 
 // RabbitMQ Config
@@ -34,8 +34,8 @@ var rabbitmq_server = os.Getenv("RABBITMQ_SERVER")
 var rabbitmq_port = "5672"
 var rabbitmq_exchange = "message_bus"
 var rabbitmq_queue = "datastore_queue"
-var rabbitmq_user = "user"
-var rabbitmq_pass = "password"
+var rabbitmq_user = os.Getenv("RABBITMQ_USER")
+var rabbitmq_pass = os.Getenv("RABBITMQ_PASSWORD")
 
 func main() {
 
@@ -127,16 +127,12 @@ func main() {
 			switch d.RoutingKey {
 			case "cp.shortlink.create":
 				// insert new shortlink into mysql
-				res, _ := db.Exec("insert into tiny_urls ( orig_url, short_url ) values ( ?, ? ) ;", msg.OrigUrl, msg.ShortUrl)
-				lastInsId, _ := res.LastInsertId()
-				rowsInsed, _ := res.RowsAffected()
-				fmt.Println(d.RoutingKey, " Last Inserted: ", lastInsId, " Rows Affected: ", rowsInsed )
+				_, _ = db.Exec("insert into tiny_urls ( orig_url, short_url ) values ( ?, ? ) ;", msg.OrigUrl, msg.ShortUrl)
+				fmt.Println(d.RoutingKey)
 			case "lr.shortlink.update":
 				// update visits in MySQL
-				res, _ := db.Exec("update tiny_urls set visits = visits + 1 where short_url = ?", msg.ShortUrl)
-				lastInsId, _ := res.LastInsertId()
-				rowsInsed, _ := res.RowsAffected()
-				fmt.Println(d.RoutingKey, " Last Inserted: ", lastInsId, " Rows Affected: ", rowsInsed )
+				_, _ = db.Exec("update tiny_urls set visits = visits + 1 where short_url = ?", msg.ShortUrl)
+				fmt.Println(d.RoutingKey)
 			default:
 				log.Println("Invalid Routing Key: %s", d.RoutingKey)
 			}

@@ -58,7 +58,7 @@ deployment-get-pods:
 	microk8s kubectl get pods --namespace bitly -l name=link-redirect
 
 deployment-pod-shell:
-	microk8s kubectl exec  --namespace bitly -it $(pod) -- /bin/bash
+	microk8s kubectl exec  --namespace bitly -it $(pod) -- /bin/sh
 
 deployment-upgrade:
 	microk8s kubectl apply --namespace bitly -f lr-deployment.yaml

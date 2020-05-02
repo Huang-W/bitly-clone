@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"bytes"
 	"io/ioutil"
 	"net/http"
@@ -45,6 +46,13 @@ func initRoutes(mx *mux.Router, formatter *render.Render) {
 func pingHandler(formatter *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		formatter.JSON(w, http.StatusOK, struct{ Test string }{"LR Server: " + this_id.String() + " - API version 3.0 alive!"})
+	}
+}
+
+// Test Redirect
+func testHandler(formatter *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		http.Redirect(w, req, "http://www.golang.org", http.StatusMovedPermanently)
 	}
 }
 
@@ -127,7 +135,10 @@ func butlyRedirectUrlHandler(formatter *render.Render) http.HandlerFunc {
 		queueMsgJson, _ = json.Marshal(queueMsg)
 		warnOnError(err, "Error marshaling json from shortlinkMsg")
 		queue_send( queueMsgJson )
-		formatter.JSON(w, http.StatusOK, httpResponse)
+		if (strings.HasPrefix( httpResponse.OrigUrl, "http://" ) || strings.HasPrefix( httpResponse.OrigUrl, "https://" )) == false {
+			httpResponse.OrigUrl = "http://" + httpResponse.OrigUrl;
+		}
+		http.Redirect(w, req, httpResponse.OrigUrl, http.StatusMovedPermanently)
 	}
 }
 

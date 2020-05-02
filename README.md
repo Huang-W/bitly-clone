@@ -167,18 +167,18 @@ Sample Response:
 key|name     |type
 ---|---------|-----------
 PK |id       |bigint(20)
-   |orig_url |varchar(512)
-   |short_url|varchar(45)
-   |visits   |int(11)
-   |created  |timestamp
+&nbsp;|orig_url |varchar(512)
+&nbsp;|short_url|varchar(45)
+&nbsp;|visits   |int(11)
+&nbsp;|created  |timestamp
 
 **Event-Store ( eventlogs )**
 
 key|name      |type
 ---|----------|-----------
 PK |\_id      |TimeUUID  
-   |routingkey|String  
-   |body      |QueueMessage
+&nbsp;|routingkey|String  
+&nbsp;|body      |QueueMessage
 
 **UDT: QueueMessage**
 ```
@@ -193,8 +193,8 @@ PK |\_id      |TimeUUID
 key|name           |type
 ---|---------------|-----------
 PK |\_id (shorturl)|String  
-   |origurl        |String  
-   |visits         |Integer  
+&nbsp;|origurl        |String  
+&nbsp;|visits         |Integer  
 
 **Control Panel ( shortlinks )**
 
@@ -207,6 +207,6 @@ PK |\_id (shorturl)|String
 key|name           |type
 ---|---------------|-----------
 PK |key (shorturl) |String  
-   |value (origurl)|String  
+&nbsp;|value (origurl)|String  
 
 ---

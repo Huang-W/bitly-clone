@@ -5,7 +5,7 @@
 package main
 
 type shortlinkMsg struct {
-	OrigUrl string
+	OrigUrl  string
 	ShortUrl string
 }
 

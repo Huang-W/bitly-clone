@@ -6,13 +6,13 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
+	"github.com/satori/go.uuid"
 	"github.com/unrolled/render"
 	"gopkg.in/mgo.v2"
-  "gopkg.in/mgo.v2/bson"
-	"github.com/satori/go.uuid"
+	"gopkg.in/mgo.v2/bson"
+	"net/http"
 )
 
 // UUID
@@ -48,7 +48,7 @@ func pingHandler(formatter *render.Render) http.HandlerFunc {
 func butlyMergeTrendsHandler(formatter *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
-		session, err := mgo.Dial(mongodb_user+":"+mongodb_password+"@"+mongodb_server)
+		session, err := mgo.Dial(mongodb_user + ":" + mongodb_password + "@" + mongodb_server)
 		if err != nil {
 			warnOnError(err, "Error connecting to mongo-ts")
 			formatter.JSON(w, http.StatusInternalServerError, nil)
@@ -60,24 +60,24 @@ func butlyMergeTrendsHandler(formatter *render.Render) http.HandlerFunc {
 		c := session.DB(mongodb_database).C(mongodb_collection)
 
 		pipe := c.Pipe([]bson.M{
-	    {"$match": bson.M{}},
-	    {"$group": bson.M{ "_id": "$origurl", "visits": bson.M{"$sum": "$visits"}}},
-	    {"$sort":  bson.M{ "visits": -1 }},
-	    {"$limit": 5 }})
+			{"$match": bson.M{}},
+			{"$group": bson.M{"_id": "$origurl", "visits": bson.M{"$sum": "$visits"}}},
+			{"$sort": bson.M{"visits": -1}},
+			{"$limit": 5}})
 		resp := []bson.M{}
 		err = pipe.All(&resp)
 		if err != nil {
 			warnOnError(err, "Error with mongo pipe")
-		  formatter.JSON(w, http.StatusInternalServerError, nil)
+			formatter.JSON(w, http.StatusInternalServerError, nil)
 			return
 		}
 		result := []trendResult{}
 		for _, d := range resp {
-	    var document trendResult
-	    document.OrigUrl = d["_id"].(string)
-	    document.Visits = d["visits"].(int)
+			var document trendResult
+			document.OrigUrl = d["_id"].(string)
+			document.Visits = d["visits"].(int)
 			result = append(result, document)
-	  }
+		}
 		fmt.Println(result)
 		formatter.JSON(w, http.StatusOK, result)
 	}
@@ -89,14 +89,14 @@ func butlyShortlinkTrendHandler(formatter *render.Render) http.HandlerFunc {
 
 		params := mux.Vars(req)
 		var shortUrl string = params["key"]
-		fmt.Println( "Short Url Key: ", shortUrl )
+		fmt.Println("Short Url Key: ", shortUrl)
 
-		if shortUrl == ""  {
+		if shortUrl == "" {
 			formatter.JSON(w, http.StatusBadRequest, nil)
 			return
 		}
 
-		session, err := mgo.Dial(mongodb_user+":"+mongodb_password+"@"+mongodb_server)
+		session, err := mgo.Dial(mongodb_user + ":" + mongodb_password + "@" + mongodb_server)
 		if err != nil {
 			warnOnError(err, "Error connecting to mongo-ts")
 			formatter.JSON(w, http.StatusInternalServerError, nil)
@@ -114,11 +114,11 @@ func butlyShortlinkTrendHandler(formatter *render.Render) http.HandlerFunc {
 			formatter.JSON(w, http.StatusNotFound, nil)
 			return
 		}
-		fmt.Println( doc )
+		fmt.Println(doc)
 		httpResponse := shortlinkTrend{
-			OrigUrl: doc.OrigUrl,
-		 	ShortUrl: doc.Id,
-			Visits: doc.Visits,
+			OrigUrl:  doc.OrigUrl,
+			ShortUrl: doc.Id,
+			Visits:   doc.Visits,
 		}
 		formatter.JSON(w, http.StatusOK, httpResponse)
 	}

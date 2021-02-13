@@ -5,15 +5,15 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"log"
-	"encoding/json"
 	"database/sql"
-	"github.com/streadway/amqp"
+	"encoding/json"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/streadway/amqp"
 	"gopkg.in/mgo.v2"
-  "gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2/bson"
+	"log"
+	"os"
 )
 
 // MongoDB Config
@@ -40,7 +40,7 @@ var rabbitmq_pass = os.Getenv("RABBITMQ_PASSWORD")
 func main() {
 
 	// connect to rabbitmq
-	conn, err := amqp.Dial("amqp://"+rabbitmq_user+":"+rabbitmq_pass+"@"+rabbitmq_server+":"+rabbitmq_port+"/")
+	conn, err := amqp.Dial("amqp://" + rabbitmq_user + ":" + rabbitmq_pass + "@" + rabbitmq_server + ":" + rabbitmq_port + "/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
@@ -50,25 +50,7 @@ func main() {
 	defer db.Close()
 
 	// connect to event store
-/*
-	tlsConfig := &tls.Config{}
-	dialInfo := &mgo.DialInfo{
-	    Addrs: []string{"mongostorage-shard-00-00-cscrb.mongodb.net:27017",
-	                    "mongostorage-shard-00-01-cscrb.mongodb.net:27017",
-	                    "mongostorage-shard-00-02-cscrb.mongodb.net:27017"},
-	    Database: "admin",
-	    Username: "cmpe281_user",
-	    Password: "GTe6oAN1ZxqTRfyJ",
-	}
-	dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
-	    conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
-	    return conn, err
-	}
-	session, err := mgo.DialWithInfo(dialInfo)
-	failOnError(err, "Error connecting to mongodb")
-	defer session.Close()
-*/
-	session, err := mgo.Dial(mongodb_user+":"+mongodb_password+"@"+mongodb_server)
+	session, err := mgo.Dial(mongodb_user + ":" + mongodb_password + "@" + mongodb_server)
 	failOnError(err, "Error connecting to mongodb")
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
@@ -78,30 +60,30 @@ func main() {
 	defer ch.Close()
 
 	_ = ch.ExchangeDeclare(
-		rabbitmq_exchange,  // name
-		"topic",  					// type
-	   true,     					// durable
-	   false,   					// auto-deleted
-	   false,  					  // internal
-	   false,   					// no-wait
-	   nil,     					// arguments
+		rabbitmq_exchange, // name
+		"topic",           // type
+		true,              // durable
+		false,             // auto-deleted
+		false,             // internal
+		false,             // no-wait
+		nil,               // arguments
 	)
 
 	q, _ := ch.QueueDeclare(
-		rabbitmq_queue,			 // name
-		false,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		rabbitmq_queue, // name
+		false,          // durable
+		false,          // delete when unused
+		false,          // exclusive
+		false,          // no-wait
+		nil,            // arguments
 	)
 
 	_ = ch.QueueBind(
-		q.Name, 					 // queue name
-	  "*.shortlink.*", 	 // routing key
-	  rabbitmq_exchange, // exchange
-	  false,
-	  nil,
+		q.Name,            // queue name
+		"*.shortlink.*",   // routing key
+		rabbitmq_exchange, // exchange
+		false,
+		nil,
 	)
 
 	msgs, _ := ch.Consume(
@@ -122,7 +104,7 @@ func main() {
 
 			// unmarshal body
 			var msg shortlinkMsg
-		  _ = json.Unmarshal(d.Body, &msg)
+			_ = json.Unmarshal(d.Body, &msg)
 
 			switch d.RoutingKey {
 			case "cp.shortlink.create":
@@ -139,8 +121,8 @@ func main() {
 			go func() {
 				// create new event log
 				_ = c.Insert(bson.M{"routingkey": d.RoutingKey,
-													  "body": msg,
-													 })
+					"body": msg,
+				})
 			}()
 			d.Ack(false)
 		}

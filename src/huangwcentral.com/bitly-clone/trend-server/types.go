@@ -5,15 +5,15 @@
 package main
 
 type trendServerEntry struct {
-	Id string `json:"id" bson:"_id"`
+	Id      string `json:"id" bson:"_id"`
 	OrigUrl string
-	Visits int
+	Visits  int
 }
 
 type shortlinkTrend struct {
-	OrigUrl string
-  ShortUrl string
-  Visits int
+	OrigUrl  string
+	ShortUrl string
+	Visits   int
 }
 
 type shortUrl struct {
@@ -21,11 +21,11 @@ type shortUrl struct {
 }
 
 type shortlinkMsg struct {
-	OrigUrl string
+	OrigUrl  string
 	ShortUrl string
 }
 
 type trendResult struct {
 	OrigUrl string
-	Visits int
+	Visits  int
 }

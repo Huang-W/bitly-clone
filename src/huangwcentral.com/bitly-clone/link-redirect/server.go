@@ -5,20 +5,20 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"strings"
 	"bytes"
-	"io/ioutil"
-	"net/http"
-	"encoding/json"
-	"github.com/codegangsta/negroni"
-	"github.com/streadway/amqp"
-	"github.com/gorilla/mux"
-	"github.com/unrolled/render"
-	"github.com/satori/go.uuid"
 	"database/sql"
-_ "github.com/go-sql-driver/mysql"
+	"encoding/json"
+	"fmt"
+	"github.com/codegangsta/negroni"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/mux"
+	"github.com/satori/go.uuid"
+	"github.com/streadway/amqp"
+	"github.com/unrolled/render"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strings"
 )
 
 // UUID
@@ -62,25 +62,25 @@ func butlyRedirectUrlHandler(formatter *render.Render) http.HandlerFunc {
 
 		params := mux.Vars(req)
 		var short_url string = params["key"]
-		fmt.Println( "Short Url Key: ", short_url )
+		fmt.Println("Short Url Key: ", short_url)
 
-		if short_url == ""  {
+		if short_url == "" {
 			formatter.JSON(w, http.StatusBadRequest, nil)
 			return
 		}
 
 		// look up short url in cache
-		resp, err := http.Get("http://"+nosql_host+":"+nosql_port+"/"+nosql_api+"/"+short_url)
-		if ( err != nil ) {
+		resp, err := http.Get("http://" + nosql_host + ":" + nosql_port + "/" + nosql_api + "/" + short_url)
+		if err != nil {
 			warnOnError(err, "Error getting doc from NoSQL")
 			formatter.JSON(w, http.StatusInternalServerError, nil)
 			return
 		}
 		defer resp.Body.Close()
 
-		var	(
+		var (
 			httpResponse originalUrl
-			queueMsg shortlinkMsg
+			queueMsg     shortlinkMsg
 			queueMsgJson []byte
 		)
 
@@ -90,7 +90,7 @@ func butlyRedirectUrlHandler(formatter *render.Render) http.HandlerFunc {
 			respBody, _ := ioutil.ReadAll(resp.Body)
 			fmt.Println("Response Body: ", respBody)
 			_ = json.Unmarshal(respBody, &queueMsg)
-			httpResponse = originalUrl{ queueMsg.OrigUrl }
+			httpResponse = originalUrl{queueMsg.OrigUrl}
 			queueMsg.ShortUrl = short_url
 
 		} else {
@@ -119,7 +119,7 @@ func butlyRedirectUrlHandler(formatter *render.Render) http.HandlerFunc {
 			client := &http.Client{}
 			log.Println("Original URL from MySQL: ", httpResponse)
 			queueMsgJson, _ = json.Marshal(queueMsg)
-			reader := bytes.NewReader( []byte( queueMsgJson ) )
+			reader := bytes.NewReader([]byte(queueMsgJson))
 			req, err := http.NewRequest(http.MethodPost, "http://"+nosql_host+":"+nosql_port+"/"+nosql_api+"/"+short_url, reader)
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("Content-Type", "text/plain")
@@ -134,9 +134,9 @@ func butlyRedirectUrlHandler(formatter *render.Render) http.HandlerFunc {
 		}
 		queueMsgJson, _ = json.Marshal(queueMsg)
 		warnOnError(err, "Error marshaling json from shortlinkMsg")
-		queue_send( queueMsgJson )
-		if (strings.HasPrefix( httpResponse.OrigUrl, "http://" ) || strings.HasPrefix( httpResponse.OrigUrl, "https://" )) == false {
-			httpResponse.OrigUrl = "http://" + httpResponse.OrigUrl;
+		queue_send(queueMsgJson)
+		if (strings.HasPrefix(httpResponse.OrigUrl, "http://") || strings.HasPrefix(httpResponse.OrigUrl, "https://")) == false {
+			httpResponse.OrigUrl = "http://" + httpResponse.OrigUrl
 		}
 		http.Redirect(w, req, httpResponse.OrigUrl, http.StatusMovedPermanently)
 	}
@@ -144,7 +144,7 @@ func butlyRedirectUrlHandler(formatter *render.Render) http.HandlerFunc {
 
 // update visits
 func queue_send(message []byte) {
-	conn, err := amqp.Dial("amqp://"+rabbitmq_user+":"+rabbitmq_pass+"@"+rabbitmq_server+":"+rabbitmq_port+"/")
+	conn, err := amqp.Dial("amqp://" + rabbitmq_user + ":" + rabbitmq_pass + "@" + rabbitmq_server + ":" + rabbitmq_port + "/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
@@ -153,21 +153,21 @@ func queue_send(message []byte) {
 	defer ch.Close()
 
 	err = ch.ExchangeDeclare(
-		rabbitmq_exchange,  // name
-		"topic", 					  // type
-	   true,     					// durable
-	   false,   					// auto-deleted
-	   false,  					  // internal
-	   false,   					// no-wait
-	   nil,     					// arguments
+		rabbitmq_exchange, // name
+		"topic",           // type
+		true,              // durable
+		false,             // auto-deleted
+		false,             // internal
+		false,             // no-wait
+		nil,               // arguments
 	)
 	failOnError(err, "Failed to declare an exchange")
 
 	err = ch.Publish(
 		rabbitmq_exchange,     // exchange
 		"lr.shortlink.update", // routing key
-		false,  				    	 // mandatory
-		false,  					     // immediate
+		false,                 // mandatory
+		false,                 // immediate
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "text/plain",

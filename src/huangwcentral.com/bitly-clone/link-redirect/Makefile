@@ -63,6 +63,9 @@ deployment-pod-shell:
 deployment-upgrade:
 	microk8s kubectl apply --namespace bitly -f lr-deployment.yaml
 
+deployment-set:
+	microk8s kubectl set image deployment lr-deployment link-redirect=gcr.io/cmpe281-267121/link-redirect
+
 deployment-delete:
 	microk8s kubectl delete deployment --namespace bitly lr-deployment
 

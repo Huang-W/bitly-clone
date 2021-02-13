@@ -5,19 +5,19 @@
 package main
 
 import (
-	"os"
+	"encoding/json"
 	"fmt"
+	"github.com/codegangsta/negroni"
+	"github.com/gorilla/mux"
+	"github.com/satori/go.uuid"
+	"github.com/streadway/amqp"
+	"github.com/unrolled/render"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"log"
 	"net/http"
 	"net/url"
-	"encoding/json"
-	"github.com/codegangsta/negroni"
-	"github.com/streadway/amqp"
-	"github.com/gorilla/mux"
-	"github.com/unrolled/render"
-	"gopkg.in/mgo.v2"
-  "gopkg.in/mgo.v2/bson"
-	"github.com/satori/go.uuid"
+	"os"
 )
 
 // MongoDB Config
@@ -53,8 +53,8 @@ func NewServer() *negroni.Negroni {
 func init() {
 
 	// check mongo-cp
-	session, err := mgo.Dial(mongodb_user+":"+mongodb_password+"@"+mongodb_server)
-  failOnError(err, "Error connecting to mongodb")
+	session, err := mgo.Dial(mongodb_user + ":" + mongodb_password + "@" + mongodb_server)
+	failOnError(err, "Error connecting to mongodb")
 	defer session.Close()
 
 	// check database and table
@@ -65,7 +65,7 @@ func init() {
 	fmt.Println(short)
 
 	// check rabbitmq
-	conn, err := amqp.Dial("amqp://"+rabbitmq_user+":"+rabbitmq_pass+"@"+rabbitmq_server+":"+rabbitmq_port+"/")
+	conn, err := amqp.Dial("amqp://" + rabbitmq_user + ":" + rabbitmq_pass + "@" + rabbitmq_server + ":" + rabbitmq_port + "/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 }
@@ -105,16 +105,16 @@ func butlyShortenUrlHandler(formatter *render.Render) http.HandlerFunc {
 		}
 		url, err := url.Parse(reqBody.OrigUrl)
 		warnOnError(err, "Error parsing url")
-		if ( url.Opaque != "" || url.Host == "" ) && url.Scheme != "" && url.Scheme != "http" && url.Scheme == "https" {
+		if (url.Opaque != "" || url.Host == "") && url.Scheme != "" && url.Scheme != "http" && url.Scheme == "https" {
 			log.Println("Invalid URL")
 			formatter.JSON(w, http.StatusBadRequest, nil)
 			return
 		}
 
 		// connect to mongo
-		session, err := mgo.Dial(mongodb_user+":"+mongodb_password+"@"+mongodb_server)
+		session, err := mgo.Dial(mongodb_user + ":" + mongodb_password + "@" + mongodb_server)
 		if err != nil {
-			warnOnError(err, "Error connection to " + mongodb_server)
+			warnOnError(err, "Error connection to "+mongodb_server)
 			formatter.JSON(w, http.StatusInternalServerError, nil)
 			return
 		}
@@ -131,15 +131,15 @@ func butlyShortenUrlHandler(formatter *render.Render) http.HandlerFunc {
 			return
 		}
 		_ = c.RemoveId(short_url.Id)
-		msg := shortlinkMsg {
-			OrigUrl: reqBody.OrigUrl,
+		msg := shortlinkMsg{
+			OrigUrl:  reqBody.OrigUrl,
 			ShortUrl: short_url.Id,
 		}
 
 		msgJson, _ := json.Marshal(msg)
-		queue_send( string(msgJson) )
+		queue_send(string(msgJson))
 
-		result := shortlinkResp {
+		result := shortlinkResp{
 			ShortUrl: short_url.Id,
 		}
 		fmt.Println("Shortened Url: ", result)
@@ -149,7 +149,7 @@ func butlyShortenUrlHandler(formatter *render.Render) http.HandlerFunc {
 
 // Send Order to Queue for Processing
 func queue_send(message string) {
-	conn, err := amqp.Dial("amqp://"+rabbitmq_user+":"+rabbitmq_pass+"@"+rabbitmq_server+":"+rabbitmq_port+"/")
+	conn, err := amqp.Dial("amqp://" + rabbitmq_user + ":" + rabbitmq_pass + "@" + rabbitmq_server + ":" + rabbitmq_port + "/")
 	warnOnError(err, "Error connecting to rabbitmq: ")
 	defer conn.Close()
 
@@ -157,20 +157,20 @@ func queue_send(message string) {
 	defer ch.Close()
 
 	_ = ch.ExchangeDeclare(
-		rabbitmq_exchange,  // name
-		"topic", 					// type
-	   true,     					// durable
-	   false,   					// auto-deleted
-	   false,  					  // internal
-	   false,   					// no-wait
-	   nil,     					// arguments
+		rabbitmq_exchange, // name
+		"topic",           // type
+		true,              // durable
+		false,             // auto-deleted
+		false,             // internal
+		false,             // no-wait
+		nil,               // arguments
 	)
 
 	_ = ch.Publish(
-		rabbitmq_exchange,  // exchange
+		rabbitmq_exchange,     // exchange
 		"cp.shortlink.create", // routing key
-		false,  					  // mandatory
-		false,  					  // immediate
+		false,                 // mandatory
+		false,                 // immediate
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "text/plain",

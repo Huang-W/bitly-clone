@@ -6,16 +6,16 @@ package main
 
 import (
 	// set the PORT ENV variable
-	"os"
-	"fmt"
-	"log"
 	"bytes"
-	"io/ioutil"
-	"net/http"
-	"github.com/streadway/amqp"
-	"encoding/json"
 	"database/sql"
-_ "github.com/go-sql-driver/mysql"
+	"encoding/json"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/streadway/amqp"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
 )
 
 // NoSQL Lookup Cache
@@ -40,13 +40,13 @@ var mysql_connect = mysql_user + ":" + mysql_password + "@tcp(" + mysql_server +
 func main() {
 
 	// check rabbitmq
-	conn, err := amqp.Dial("amqp://"+rabbitmq_user+":"+rabbitmq_pass+"@"+rabbitmq_server+":"+rabbitmq_port+"/")
+	conn, err := amqp.Dial("amqp://" + rabbitmq_user + ":" + rabbitmq_pass + "@" + rabbitmq_server + ":" + rabbitmq_port + "/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
 	// check nosql
-	resp, err := http.Get("http://"+nosql_host+":"+nosql_port+"/"+nosql_api)
-  failOnError(err, "Error communicating with NoSQL project")
+	resp, err := http.Get("http://" + nosql_host + ":" + nosql_port + "/" + nosql_api)
+	failOnError(err, "Error communicating with NoSQL project")
 	fmt.Println("NoSQL Response Status: ", resp.Status)
 	resp.Body.Close()
 
@@ -55,9 +55,9 @@ func main() {
 	failOnError(err, "Error connecting to mysql")
 	defer db.Close()
 	var (
-		id int
+		id        int
 		short_url string
-		orig_url string
+		orig_url  string
 	)
 	row := db.QueryRow("select id, short_url, orig_url claimed from tiny_urls where ? limit 1", 1)
 	err = row.Scan(&id, &short_url, &orig_url)
@@ -68,30 +68,30 @@ func main() {
 	defer ch.Close()
 
 	_ = ch.ExchangeDeclare(
-		rabbitmq_exchange,  // name
-		"topic",  					// type
-	   true,     					// durable
-	   false,   					// auto-deleted
-	   false,  					  // internal
-	   false,   					// no-wait
-	   nil,     					// arguments
+		rabbitmq_exchange, // name
+		"topic",           // type
+		true,              // durable
+		false,             // auto-deleted
+		false,             // internal
+		false,             // no-wait
+		nil,               // arguments
 	)
 
 	q, _ := ch.QueueDeclare(
-		rabbitmq_queue,			 // name
-		false,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		rabbitmq_queue, // name
+		false,          // durable
+		false,          // delete when unused
+		false,          // exclusive
+		false,          // no-wait
+		nil,            // arguments
 	)
 
 	_ = ch.QueueBind(
-		q.Name, 					     // queue name
-	  "cp.shortlink.create", // routing key
-	  rabbitmq_exchange,     // exchange
-	  false,
-	  nil,
+		q.Name,                // queue name
+		"cp.shortlink.create", // routing key
+		rabbitmq_exchange,     // exchange
+		false,
+		nil,
 	)
 
 	msgs, _ := ch.Consume(

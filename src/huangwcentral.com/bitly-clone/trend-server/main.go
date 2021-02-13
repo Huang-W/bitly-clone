@@ -5,13 +5,13 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"log"
-	"github.com/streadway/amqp"
 	"encoding/json"
+	"fmt"
+	"github.com/streadway/amqp"
 	"gopkg.in/mgo.v2"
-  "gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2/bson"
+	"log"
+	"os"
 )
 
 // MongoDB Config
@@ -32,8 +32,8 @@ var rabbitmq_pass = os.Getenv("RABBITMQ_PASSWORD")
 func main() {
 
 	// check mongo
-	session, err := mgo.Dial(mongodb_user+":"+mongodb_password+"@"+mongodb_server)
-  failOnError(err, "Error connecting to mongodb")
+	session, err := mgo.Dial(mongodb_user + ":" + mongodb_password + "@" + mongodb_server)
+	failOnError(err, "Error connecting to mongodb")
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
 	c := session.DB(mongodb_database).C(mongodb_collection)
@@ -41,7 +41,7 @@ func main() {
 	// check for database / table?
 
 	// check rabbitmq
-	conn, err := amqp.Dial("amqp://"+rabbitmq_user+":"+rabbitmq_pass+"@"+rabbitmq_server+":"+rabbitmq_port+"/")
+	conn, err := amqp.Dial("amqp://" + rabbitmq_user + ":" + rabbitmq_pass + "@" + rabbitmq_server + ":" + rabbitmq_port + "/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
@@ -50,32 +50,32 @@ func main() {
 	defer ch.Close()
 
 	err = ch.ExchangeDeclare(
-		rabbitmq_exchange,  // name
-		"topic",  					// type
-	   true,     	  			// durable
-	   false,   					// auto-deleted
-	   false,  					  // internal
-	   false,   					// no-wait
-	   nil,     					// arguments
+		rabbitmq_exchange, // name
+		"topic",           // type
+		true,              // durable
+		false,             // auto-deleted
+		false,             // internal
+		false,             // no-wait
+		nil,               // arguments
 	)
 	warnOnError(err, "Failed to declare an exchange")
 
 	q, err := ch.QueueDeclare(
-		rabbitmq_queue,			 // name
-		false,   // durable
-		false,   // delete when unused
-		false,    // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		rabbitmq_queue, // name
+		false,          // durable
+		false,          // delete when unused
+		false,          // exclusive
+		false,          // no-wait
+		nil,            // arguments
 	)
 	warnOnError(err, "Failed to declare a queue")
 
 	err = ch.QueueBind(
-		q.Name, 					 // queue name
-	  "lr.shortlink.update",  // routing key
-	  rabbitmq_exchange, // exchange
-	  false,
-	  nil,
+		q.Name,                // queue name
+		"lr.shortlink.update", // routing key
+		rabbitmq_exchange,     // exchange
+		false,
+		nil,
 	)
 	warnOnError(err, "Failed to bind queue to exchange")
 
@@ -103,14 +103,14 @@ func main() {
 			if count == 0 {
 				// insert into mongo
 				err = c.Insert(bson.M{"_id": msg.ShortUrl,
-															"origurl": msg.OrigUrl,
-														  "visits": 1 })
+					"origurl": msg.OrigUrl,
+					"visits":  1})
 				warnOnError(err, "Error inserting document into mongo")
 			} else {
 				// update visits
 				query := bson.M{"_id": msg.ShortUrl}
-				change := bson.M{"$inc": bson.M{"visits" : 1}}
-				err = c.Update( query, change )
+				change := bson.M{"$inc": bson.M{"visits": 1}}
+				err = c.Update(query, change)
 				warnOnError(err, "Error updating visits of accessed url")
 			}
 		}

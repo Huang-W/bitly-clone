@@ -63,6 +63,9 @@ deployment-pod-shell:
 deployment-upgrade:
 	microk8s kubectl apply --namespace bitly -f ts-deployment.yaml
 
+deployment-set:
+	microk8s kubectl set image deployment ts-deployment trend-server=gcr.io/cmpe281-267121/trend-server
+
 deployment-delete:
 	microk8s kubectl delete deployment --namespace bitly ts-deployment
 

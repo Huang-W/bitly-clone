@@ -1,4 +1,3 @@
-
 all: clean
 
 clean:
@@ -10,55 +9,63 @@ go-env:
 	go env -w GOPATH=${CURDIR}
 
 go-get:
-	rm -rf src/github.com
-	rm -rf src/gopkg.in
-	go get -v github.com/codegangsta/negroni
-	go get -v github.com/gorilla/mux
-	go get -v github.com/unrolled/render
-	go get -v github.com/satori/go.uuid
-	go get -v database/sql
-	go get -v github.com/go-sql-driver/mysql
+	go get -d github.com/codegangsta/negroni
+	go get -d github.com/gorilla/mux
+	go get -d github.com/google/uuid
+	go get -d github.com/streadway/amqp
+	go get -d github.com/unrolled/render
+	go get -d google.golang.org/api
+	go get -d github.com/go-sql-driver/mysql
+	go get -d go.mongodb.org/mongo-driver/mongo
 
 format:
-	go fmt control-panel
-	go fmt link-redirect
-	go fmt trend-server
-	go fmt datastore-worker
+	gofmt -s -w .
 
 install:
-	go install control-panel
-	go install link-redirect
-	go install trend-server
-	go install datastore-worker
+	go install huangwcentral.com/bitly-clone/control-panel
+	go install huangwcentral.com/bitly-clone/link-redirect
+	go install huangwcentral.com/bitly-clone/datastore-worker
 
 build:
-	go build control-panel
-	go build link-redirect
-	go build trend-server
-	go build datastore-worker
+	go build huangwcentral.com/bitly-clone/control-panel
+	go build huangwcentral.com/bitly-clone/link-redirect
+	go build huangwcentral.com/bitly-clone/datastore-worker
+
+run:
+	control-panel &
+	link-redirect &
+	datastore-worker &
 
 docker-build:
-	docker build -t wardhuang/control-panel -f src/control-panel/Dockerfile .
-	docker build -t wardhuang/link-redirect -f src/link-redirect/Dockerfile .
-	docker build -t wardhuang/trend-server -f src/trend-server/Dockerfile .
-	docker build -t wardhuang/datastore-worker -f src/datastore-worker/Dockerfile .
+	docker build -t wardhuang/control-panel -f src/huangwcentral.com/bitly-clone/control-panel/Dockerfile .
+	docker build -t wardhuang/link-redirect -f src/huangwcentral.com/bitly-clone/link-redirect/Dockerfile .
+	docker build -t wardhuang/datastore-worker -f src/huangwcentral.com/bitly-clone/datastore-worker/Dockerfile .
 	docker images
 
 docker-run:
-	docker run -d --name control-panel --network bitly -td -p 3000:3000 wardhuang/control-panel
-	docker run -d --name link-redirect --network bitly -td -p 3001:3001 wardhuang/link-redirect
-	docker run -d --name trend-server --network bitly -td -p 3002:3002 wardhuang/trend-server
-	docker run -d --name datastore-worker --network bitly -td wardhuang/datastore-worker
+	docker run --name control-panel -td -p 3000:3000 wardhuang/control-panel
+	docker run --name link-redirect -td -p 3001:3001 wardhuang/link-redirect
+	docker run --name datastore-worker -td wardhuang/datastore-worker
 
 docker-clean:
 	docker stop control-panel
 	docker stop link-redirect
-	docker stop trend-server
 	docker stop datastore-worker
+	docker stop rabbitmq
 	docker rm control-panel
 	docker rm link-redirect
-	docker rm trend-server
 	docker rm datastore-worker
+	docker rm rabbitmq
+
+docker-tag:
+	docker tag wardhuang/control-panel:latest gcr.io/cmpe281-267121/control-panel
+	docker tag wardhuang/link-redirect:latest gcr.io/cmpe281-267121/link-redirect
+	docker tag wardhuang/datastore-worker:latest gcr.io/cmpe281-267121/datastore-worker
+
+docker-push:
+	docker push gcr.io/cmpe281-267121/control-panel
+	docker push gcr.io/cmpe281-267121/link-redirect
+	docker push gcr.io/cmpe281-267121/datastore-worker
 
 log-cp:
 	docker logs control-panel
@@ -84,11 +91,13 @@ database-run:
 	docker run --name mongo-ts --network bitly -p 27017:27017 -td mongo
 	docker run --name mongo-cp --network bitly -p 27019:27017 -td mongo
 	docker run --name event-store --network bitly -p 27018:27017 -td mongo
-	docker run --name rabbitmq --network bitly --hostname my-rabbit \
-						 -e RABBITMQ_DEFAULT_USER=user \
-						 -e RABBITMQ_DEFAULT_PASS=password \
-						 -p 8080:15672 -p 4369:4369 -p 5672:5672 \
-						 -d rabbitmq:3-management
+
+rabbit-run:
+	docker run --name rabbitmq --network bitly-clone --hostname my-rabbit \
+                                    -e RABBITMQ_DEFAULT_USER=user \
+                                    -e RABBITMQ_DEFAULT_PASS=password \
+                                    -p 15672:15672 -p 4369:4369 -p 5672:5672 \
+                                    -d rabbitmq:3-management
 
 kong-database:
 	docker run -d --name kong-database --network bitly -p 9042:9042 cassandra:2.2
@@ -115,20 +124,11 @@ cp-shell:
 lr-shell:
 	docker exec -it link-redirect bash
 
-cloud-shell-ts:
-	mongo -u cmpe281 --host 35.232.250.199
-
-cloud-shell-cp:
-	mongo -u cmpe281 --host 34.70.14.136
-
 kong-shell:
 	docker exec -it kong bash
 
 mysql-shell:
 	docker run -it --network bitly --rm mysql:5.5 mysql -h mysql -u root -p
-
-mongo-shell-cloud:
-	mongo "mongodb+srv://mongostorage-cscrb.mongodb.net/test"  --username administrator
 
 mongo-shell-ts:
 	docker run -it --rm --network bitly mongo \
@@ -161,7 +161,7 @@ docker-ip:
 	docker-machine ip
 
 ##
-## API Test (Docker Compose / Kubernetes)
+## API Test (Localhost)
 ##
 
 test-ping:
@@ -171,9 +171,9 @@ test-create-shortlink:
 	curl -X POST \
 	 	localhost:3000/link_save \
 		-H 'Content-Type: application/json' \
-		-d '{"OrigUrl":"stackoverflow.com"}'
+		-d '{"OrigUrl":"$(url)"}'
 
-test-get-origlink:
+test-visit-shortlink:
 	curl -X GET \
 	localhost:3001/r/$(sl) \
 	-H 'Content-Type: application/json'
@@ -184,7 +184,7 @@ test-get-trend:
 	-H 'Content-Type: application/json'
 
 ##
-## Kubernetes (Docker for Mac)
+## Kubernetes
 ##
 
 clean-up:
@@ -258,32 +258,3 @@ bus-delete:
 
 bus-docker:
 	docker run --name message-bus -d gcr.io/cmpe281-267121/message-bus
-
-
-
-##
-## API Test inside Jump Box (Kubernetes Serivce)
-##
-
-
-jumpbox-ping:
-	curl http://cp-service:9000/ping
-
-jumpbox-create-shortlink:
-	curl -X POST http://cp-service:9000/link_save -H 'Content-Type: application/json' -d '{"OrigUrl":"gobyexample.com"}'
-
-jumpbox-get-shortlink:
-	curl -X GET http://lr-service:9000/r/$(sl) -H 'Content-Type: application/json'
-
-jumpbox-get-trend:
-	curl -X GET http://ts-service:9000/t/$(sl) -H 'Content-Type: application/json'
-
-jumpbox-order-status:
-	curl -X GET \
-  	http://gumball-service:9000/order \
-  	-H 'Content-Type: application/json'
-
-jumpbox-process-order:
-	curl -X POST \
-  	http://gumball-service:9000/orders \
-  	-H 'Content-Type: application/json'

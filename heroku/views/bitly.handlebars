@@ -1,0 +1,28 @@
+
+<div id="content" style="display:flex;flex-direction:column">
+  <h1 align="center">Butly - a link shortener</h1>
+
+  <!-- FORM SECTION -->
+  <form name="butlyform" method="post" action="">
+
+    <input type="hidden" name="ts" id="ts" value="{{ts}}" />
+    <input type="hidden" name="hash" id="hash" value="{{hash}}" />
+
+    <div align="center">
+
+      <textarea name="message" cols="50" rows="15" readonly id="message">
+        {{message}}
+      </textarea>
+      <p>{{message2}}</p>
+      <p><a href="{{link}}">{{link}}</a></p>
+    </div>
+    <!-- <p align="center"><img src="/images/giant-gumball-machine.jpg"  width="385" height="316"></p> -->
+
+    <p align="center">
+      <input type="url" id="origurl" name="orig_url" value="">
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <input type="submit" name="event" id="btnShortenUrl" value="Shorten URL">
+    </p>
+  </form>
+  <!-- END FORM SECTION -->
+</div>

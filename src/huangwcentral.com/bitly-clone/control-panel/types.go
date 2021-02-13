@@ -11,7 +11,7 @@ type shortlink struct {
 }
 
 type shortlinkMsg struct {
-	OrigUrl string
+	OrigUrl  string
 	ShortUrl string
 }
 

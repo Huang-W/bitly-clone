@@ -1,19 +1,30 @@
-# bit.ly clone
+### Cloud Technologies (Spring 2020) - Bitly Clone
 
-## [Video Presentation](https://youtu.be/VpryuIE8T5c)
+By Ward Huang
 
----
 ##### Deployment Diagram
-[Bitly-Clone Deployment Diagram](design/01.bitly-diagram.png)
-![Bitly-Clone Deployment Diagram](design/01.bitly-diagram.png)
+<details>
+<summary>screenshot</summary>
+
+![Bitly-Clone Deployment Diagram 1](design/01.bitly-diagram.png)
+
+</details>
+
 ##### Project networks ( with GKE cluster)
+<details>
+<summary>screenshots</summary>
+
 [VPC and subnetworks](design/02.bitly-network.png)
 
 [Firewall Rules](design/03.bitky-network-firewall.png)
 
 [Instances and Network Tags](design/04.bitly-network-tags-and-instances.png)
 
+</details>
+
 ##### Google Kubernetes Engine
+<details>
+<summary>screenshots</summary>
 
 [Cluster Info](design/05.bitly-gke.png)
 
@@ -21,9 +32,13 @@
 
 [Load Balancer](design/07.bitly-gke-load-balancer.png)
 
-[Testing Service NodePort](design/08.bitly-gke-node-ports.png) ( From Kong instance, _through_ the load balancer )
+[Testing Service NodePort](design/08.bitly-gke-node-ports.png)
+
+</details>
 
 ##### Testing API through Kong
+<details>
+<summary>screenshots</summary>
 
 [Declarative Kong Config](design/09.bitly-kong-declarative-config.png)
 
@@ -33,26 +48,36 @@
 
 [Check trending URLs](design/12.bitly-trending-links.png)
 
-##### CQRS
+</details>
 
-- _CREATE shortlink_ and _UPDATE visit_ requests are sent to the queue and handled by each service's consumers
-- READ requests go directly to the databases
-  - LR Server -> NoSQL Cache -> MySQL
-  - Trend Server -> MongoDB
+##### CQRS
+<details>
+<summary>CQRS</summary>
+
+Reads and Writes are handled differently in this system.
+- Writes are passed onto the message bus.
+- Reads have direct access to data storage.
 
 [CQRS](design/13.bitly-cqrs.jpeg)
 
 [CQRS-2](design/14.bitly-cqrs-2.jpeg)
 
-##### Event Sourcing
+</details>
 
-Messages from the bus with routingkeys of CREATE and UPDATE are stored in the mongodb event-store. ( see above: CQRS )
+##### Event Sourcing
+<details>
+<summary>Event Sourcing</summary>
+
+Two event types are described below. These events are logged in the event-store.
 - cp.shortlink.create --- create new shortlink
-- lr.shortlink.update --- update visits
+- lr.shortlink.update --- a user has visited a shortlink
 
 [Event-Sourcing](design/15.bitly-event-sourcing.png)
+</details>
 
 ##### Some issues faced during project ( Journal )
+<details>
+<summary>Project Journal</summary>
 
 - **Problem**: how to access rabbitmq dashboard over internet
   - _Solution_: SSH Tunnel through google cloud SDK
@@ -66,18 +91,18 @@ Messages from the bus with routingkeys of CREATE and UPDATE are stored in the mo
 - **Problem**: Container images are too large to push on DSL connection.
   - _Solution-1_: Use alpine linux for golang containers
   - _Solution-2_: Remove yum install package command from NoSQL Dockerfile
-      - Bonus: Finally realize what the image layers represent
 - **Problem**: Where do we get new shortlinks from?
   - _Solution-1_: Use inserted MySQL index ( increment a counter )
   - _Solution-2_: Hash the URL
   - _Solution-3_: Randomize strings and maintain key-value table of assigned shortlinks
-  - _Solution-4_: Pre-generate and assign shortlinks as needed
+  - _Solution-4_: Pre-generate shortlinks and allocate as needed
 
----
-
-### Link to Kong API Gateway -- External IP: [34.71.111.143:8000](34.71.111.143:8000)
+</details>
 
 ##### Control Panel API
+<details>
+<summary>Control Panel API</summary>
+
 **/cp/ping --- GET**
 ```
 Sample Response:
@@ -98,8 +123,13 @@ Sample Response:
   "ShortUrl": "vA"
 }
 ```
----
+
+</details>
+
 ##### Link Redirect API
+<details>
+<summary>Link Redirect API</summary>
+
 **/lr/ping --- GET**
 ```
 Sample Response:
@@ -114,8 +144,13 @@ Sample Response:
   "OrigUrl": "aws.amazon.com"
 }
 ```
----
+
+</details>
+
 ##### Trend Server API
+<details>
+<summary>Trend Server API</summary>
+
 **/ts/ping --- GET**
 ```
 Sample Response:
@@ -158,9 +193,11 @@ Sample Response:
   }
 ]
 ```
----
+</details>
 
 #### Database Schemas
+<details>
+<summary>Database Schemas</summary>
 
 **Main MySQL Database ( tiny_urls )**
 
@@ -208,5 +245,5 @@ key|name           |type
 ---|---------------|-----------
 PK |key (shorturl) |String  
 &nbsp;|value (origurl)|String  
-
+</details>
 ---

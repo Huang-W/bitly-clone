@@ -1,5 +1,0 @@
-curl -X POST http://localhost:8888/node -H 'Content-Type: application/json' -d '{"id": "nosql-1", "name": "api_node_1", "admin_port": "8888", "api_port": "9090"}'
-curl -X POST http://localhost:8888/node -H 'Content-Type: application/json' -d '{"id": "nosql-2", "name": "api_node_2", "admin_port": "8888", "api_port": "9090"}'
-curl -X POST http://localhost:8888/node -H 'Content-Type: application/json' -d '{"id": "nosql-3", "name": "api_node_3", "admin_port": "8888", "api_port": "9090"}'
-curl -X POST http://localhost:8888/node -H 'Content-Type: application/json' -d '{"id": "nosql-4", "name": "api_node_4", "admin_port": "8888", "api_port": "9090"}'
-curl -X POST http://localhost:8888/node -H 'Content-Type: application/json' -d '{"id": "nosql-5", "name": "api_node_5", "admin_port": "8888", "api_port": "9090"}'
